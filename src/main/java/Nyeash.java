@@ -5,7 +5,7 @@ public class Nyeash {
 
     private static void printBox(String message) {
         System.out.println(LINE);
-        System.out.println(" " + message);
+        System.out.println(message);
         System.out.println(LINE);
     }
 
@@ -37,9 +37,13 @@ public class Nyeash {
                 + "⠀⠀⠙⠿⠿⣿⡇⠹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡺⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠛⠁⠀\n";
 
         System.out.println("Hello from NYEASH!\n" + logo);
-        printBox("Hello! I'm NYEASH\nI AM HUNGRY!!!!\"");
+        printBox("Hello! I'm NYEASH!\nI AM HUNGRY!!!!");
 
         Scanner sc = new Scanner(System.in);
+
+        // List Implementation
+        String[] tasks = new String[100];
+        int taskCount = 0;
 
         while (true) {
             String input = sc.nextLine().trim();
@@ -48,10 +52,32 @@ public class Nyeash {
                 printBox("Please bring me more food next time!");
                 break;
             }
+            if (input.equalsIgnoreCase("list")) {
+                if (taskCount == 0) {
+                    printBox("NO FOOD HERE... give me tasks.");
+                } else {
+                    System.out.println(LINE);
+                    for (int i = 0; i < taskCount; i++) {
+                        System.out.println((i + 1) + ". " + tasks[i]);
+                    }
+                    System.out.println(LINE);
+                }
+                continue;
+            }
 
-            // Level 1: echo whatever the user typed
-            printBox(input);
+            // When there are too many tasks
+            if (taskCount >= 100) {
+                printBox("I'M TOO FULL... (max 100 tasks)");
+                continue;
+            }
+
+            tasks[taskCount] = input;
+            taskCount++;
+
+            printBox("added: " + input);
         }
+
+        sc.close();
     }
 }
 
