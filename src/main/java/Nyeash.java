@@ -9,7 +9,8 @@ public class Nyeash {
         System.out.println(LINE);
     }
 
-    // Task class
+    // ===================== Level 4 Task Types (Inheritance) =====================
+
     public static class Task {
         protected String description;
         protected boolean isDone;
@@ -20,7 +21,7 @@ public class Nyeash {
         }
 
         public String getStatusIcon() {
-            return (isDone ? "X" : " "); // mark done task with X
+            return (isDone ? "X" : " ");
         }
 
         public void markAsDone() {
@@ -31,11 +32,69 @@ public class Nyeash {
             this.isDone = false;
         }
 
+        // for polymorphic display
+        public String getTypeIcon() {
+            return "";
+        }
+
         @Override
         public String toString() {
-            return "[" + getStatusIcon() + "] " + description;
+            return getTypeIcon() + "[" + getStatusIcon() + "] " + description;
         }
     }
+
+    public static class Todo extends Task {
+        public Todo(String description) {
+            super(description);
+        }
+
+        @Override
+        public String getTypeIcon() {
+            return "[T]";
+        }
+    }
+
+    public static class Deadline extends Task {
+        protected String by;
+
+        public Deadline(String description, String by) {
+            super(description);
+            this.by = by;
+        }
+
+        @Override
+        public String getTypeIcon() {
+            return "[D]";
+        }
+
+        @Override
+        public String toString() {
+            return "[D][" + getStatusIcon() + "] " + description + " (by: " + by + ")";
+        }
+    }
+
+    public static class Event extends Task {
+        protected String from;
+        protected String to;
+
+        public Event(String description, String from, String to) {
+            super(description);
+            this.from = from;
+            this.to = to;
+        }
+
+        @Override
+        public String getTypeIcon() {
+            return "[E]";
+        }
+
+        @Override
+        public String toString() {
+            return "[E][" + getStatusIcon() + "] " + description + " (from: " + from + " to: " + to + ")";
+        }
+    }
+
+    // ===================== Helpers =====================
 
     private static boolean isInteger(String s) {
         if (s == null || s.isEmpty()) return false;
@@ -44,6 +103,25 @@ public class Nyeash {
         }
         return true;
     }
+
+    private static int findIndex(String[] arr, String target) {
+        for (int i = 0; i < arr.length; i++) {
+            if (arr[i].equals(target)) return i;
+        }
+        return -1;
+    }
+
+    // uses only + concatenation
+    private static String concatTokens(String[] arr, int startInclusive, int endExclusive) {
+        String result = "";
+        for (int i = startInclusive; i < endExclusive; i++) {
+            if (!result.equals("")) result += " ";
+            result += arr[i];
+        }
+        return result;
+    }
+
+    // ===================== Main =====================
 
     public static void main(String[] args) {
         String logo ="⠀⠀⣠⣴⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣶⣄⡀⠀\n"
@@ -77,7 +155,7 @@ public class Nyeash {
 
         Scanner sc = new Scanner(System.in);
 
-        // ===== Level 3 storage (max 100 tasks) =====
+        // ===== storage (max 100 tasks) =====
         Task[] tasks = new Task[100];
         int taskCount = 0;
 
@@ -96,7 +174,7 @@ public class Nyeash {
                     System.out.println(LINE);
                     System.out.println("Here are the tasks in your list:");
                     for (int i = 0; i < taskCount; i++) {
-                        System.out.println((i + 1) + "." + tasks[i]); // tasks[i].toString()
+                        System.out.println((i + 1) + "." + tasks[i]);
                     }
                     System.out.println(LINE);
                 }
@@ -107,13 +185,13 @@ public class Nyeash {
             String[] parts = input.split("\\s+");
             if (parts.length == 2 && (parts[0].equalsIgnoreCase("mark") || parts[0].equalsIgnoreCase("unmark"))) {
                 if (!isInteger(parts[1])) {
-                    printBox("HUH? Give me a number. Example: mark 2");
+                    printBox("Invalid task number.");
                     continue;
                 }
 
                 int idx = Integer.parseInt(parts[1]) - 1;
                 if (idx < 0 || idx >= taskCount) {
-                    printBox("That task number doesn't exist. Try list first.");
+                    printBox("That task number doesn't exist.");
                     continue;
                 }
 
@@ -133,16 +211,75 @@ public class Nyeash {
                 continue;
             }
 
-            // Add a new task (anything else)
+            // ===== Level 4 add commands =====
             if (taskCount >= 100) {
                 printBox("I'M TOO FULL... (max 100 tasks)");
                 continue;
             }
 
-            tasks[taskCount] = new Task(input);
+            Task newTask;
+
+            // todo <desc>
+            if (parts.length >= 2 && parts[0].equalsIgnoreCase("todo")) {
+                String desc = concatTokens(parts, 1, parts.length).trim();
+                if (desc.isEmpty()) {
+                    printBox("Empty todo.");
+                    continue;
+                }
+                newTask = new Todo(desc);
+
+                // deadline <desc> /by <by>
+            } else if (parts.length >= 2 && parts[0].equalsIgnoreCase("deadline")) {
+                int byIdx = findIndex(parts, "/by");
+                if (byIdx == -1) {
+                    printBox("Missing /by.");
+                    continue;
+                }
+
+                String desc = concatTokens(parts, 1, byIdx).trim();
+                String by = concatTokens(parts, byIdx + 1, parts.length).trim();
+
+                if (desc.isEmpty() || by.isEmpty()) {
+                    printBox("Invalid deadline.");
+                    continue;
+                }
+
+                newTask = new Deadline(desc, by);
+
+                // event <desc> /from <from> /to <to>
+            } else if (parts.length >= 2 && parts[0].equalsIgnoreCase("event")) {
+                int fromIdx = findIndex(parts, "/from");
+                int toIdx = findIndex(parts, "/to");
+
+                if (fromIdx == -1 || toIdx == -1 || toIdx < fromIdx) {
+                    printBox("Missing /from or /to.");
+                    continue;
+                }
+
+                String desc = concatTokens(parts, 1, fromIdx).trim();
+                String from = concatTokens(parts, fromIdx + 1, toIdx).trim();
+                String to = concatTokens(parts, toIdx + 1, parts.length).trim();
+
+                if (desc.isEmpty() || from.isEmpty() || to.isEmpty()) {
+                    printBox("Invalid event.");
+                    continue;
+                }
+
+                newTask = new Event(desc, from, to);
+
+            } else {
+                // Backwards compatible: plain text becomes a Todo
+                newTask = new Todo(input);
+            }
+
+            tasks[taskCount] = newTask;
             taskCount++;
 
-            printBox("added: " + input);
+            System.out.println(LINE);
+            System.out.println("Got it. I've added this task:");
+            System.out.println("  " + newTask);
+            System.out.println("Now you have " + taskCount + " tasks in the list.");
+            System.out.println(LINE);
         }
 
         sc.close();
