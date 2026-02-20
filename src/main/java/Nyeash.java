@@ -33,7 +33,9 @@ public class Nyeash {
         return result;
     }
 
-    private static void handleInput(String input, TaskList taskList) throws NyeashException {
+    // NOTE: This expects TaskList to have:
+    // - size(), isFull(), get(int), add(Task), remove(int)
+    private static void handleInput(String input, TaskList taskList, Storage storage) throws NyeashException {
         if (input.isEmpty()) {
             throw new NyeashException("You didn't type anything... feed me a command :(");
         }
@@ -42,7 +44,7 @@ public class Nyeash {
         String[] parts = input.split("\\s+");
         String cmd = parts[0].toLowerCase();
 
-        // bye
+        // bye (main loop already handles, but ok to keep)
         if (cmd.equals("bye")) {
             return;
         }
@@ -78,12 +80,16 @@ public class Nyeash {
 
             if (cmd.equals("mark")) {
                 taskList.get(idx).markAsDone();
+                storage.save(taskList);
+
                 System.out.println(LINE);
                 System.out.println("Good job on finishing this! NYEASH is very proud of you!");
                 System.out.println("  " + taskList.get(idx));
                 System.out.println(LINE);
             } else {
                 taskList.get(idx).markAsNotDone();
+                storage.save(taskList);
+
                 System.out.println(LINE);
                 System.out.println("OK, NYEASH unmarked it. Better finish it cause this is above my paygrade!");
                 System.out.println("  " + taskList.get(idx));
@@ -92,6 +98,32 @@ public class Nyeash {
             return;
         }
 
+        // delete N  (place BEFORE isFull so user can delete even when "full")
+        if (cmd.equals("delete")) {
+            if (parts.length != 2) {
+                throw new NyeashException("Usage: delete <task number>");
+            }
+            if (!isInteger(parts[1])) {
+                throw new NyeashException("Task number must be an integer!!");
+            }
+
+            int idx = Integer.parseInt(parts[1]) - 1;
+            if (idx < 0 || idx >= taskList.size()) {
+                throw new NyeashException("That task number doesn't exist in MY WORLD!");
+            }
+
+            Task removed = taskList.remove(idx);
+            storage.save(taskList);
+
+            System.out.println(LINE);
+            System.out.println("Noted. I've removed this task:");
+            System.out.println("  " + removed);
+            System.out.println("Now you have " + taskList.size() + " tasks in the list.");
+            System.out.println(LINE);
+            return;
+        }
+
+        // for commands that ADD new tasks
         if (taskList.isFull()) {
             throw new NyeashException("I'M TOO FULL... (max 100 tasks)");
         }
@@ -147,10 +179,11 @@ public class Nyeash {
             newTask = new Event(desc, from, to);
 
         } else {
-            throw new NyeashException("I'm not sure what that means. Try: todo, deadline, event, list, mark, unmark, bye");
+            throw new NyeashException("I'm not sure what that means. Try: todo, deadline, event, list, mark, unmark, delete, bye");
         }
 
         taskList.add(newTask);
+        storage.save(taskList);
 
         System.out.println(LINE);
         System.out.println("Got it. I've added this task:");
@@ -192,7 +225,16 @@ public class Nyeash {
         printBox("Hello! I'm NYEASH!\nI AM HUNGRY!!!!");
 
         Scanner sc = new Scanner(System.in);
+
         TaskList taskList = new TaskList(100);
+        Storage storage = new Storage("data/nyeash.txt");
+
+        // Load saved tasks (Level 7)
+        try {
+            storage.load(taskList);
+        } catch (NyeashException e) {
+            printBox("Couldn't load saved tasks, starting fresh.\n" + e.getMessage());
+        }
 
         while (true) {
             String input = sc.nextLine().trim();
@@ -203,7 +245,7 @@ public class Nyeash {
             }
 
             try {
-                handleInput(input, taskList);
+                handleInput(input, taskList, storage);
             } catch (NyeashException e) {
                 printBox(e.getMessage());
             }
