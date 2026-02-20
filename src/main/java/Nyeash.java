@@ -229,7 +229,6 @@ public class Nyeash {
         TaskList taskList = new TaskList(100);
         Storage storage = new Storage("data/nyeash.txt");
 
-        // Load saved tasks (Level 7)
         try {
             storage.load(taskList);
         } catch (NyeashException e) {
