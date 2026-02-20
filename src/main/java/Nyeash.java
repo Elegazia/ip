@@ -92,6 +92,30 @@ public class Nyeash {
             return;
         }
 
+        // delete N
+        if (cmd.equals("delete")) {
+            if (parts.length != 2) {
+                throw new NyeashException("Usage: delete <task number>");
+            }
+            if (!isInteger(parts[1])) {
+                throw new NyeashException("Task number must be an integer!!");
+            }
+
+            int idx = Integer.parseInt(parts[1]) - 1;
+            if (idx < 0 || idx >= taskList.size()) {
+                throw new NyeashException("That task number doesn't exist in MY WORLD!");
+            }
+
+            Task removed = taskList.remove(idx);
+
+            System.out.println(LINE);
+            System.out.println("Noted. I've removed this task:");
+            System.out.println("  " + removed);
+            System.out.println("Now you have " + taskList.size() + " tasks in the list.");
+            System.out.println(LINE);
+            return;
+        }
+
         if (taskList.isFull()) {
             throw new NyeashException("I'M TOO FULL... (max 100 tasks)");
         }
