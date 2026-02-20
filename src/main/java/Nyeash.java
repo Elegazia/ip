@@ -44,7 +44,7 @@ public class Nyeash {
         String[] parts = input.split("\\s+");
         String cmd = parts[0].toLowerCase();
 
-        // bye (main loop already handles, but ok to keep)
+        // bye
         if (cmd.equals("bye")) {
             return;
         }
@@ -80,16 +80,12 @@ public class Nyeash {
 
             if (cmd.equals("mark")) {
                 taskList.get(idx).markAsDone();
-                storage.save(taskList);
-
                 System.out.println(LINE);
                 System.out.println("Good job on finishing this! NYEASH is very proud of you!");
                 System.out.println("  " + taskList.get(idx));
                 System.out.println(LINE);
             } else {
                 taskList.get(idx).markAsNotDone();
-                storage.save(taskList);
-
                 System.out.println(LINE);
                 System.out.println("OK, NYEASH unmarked it. Better finish it cause this is above my paygrade!");
                 System.out.println("  " + taskList.get(idx));
@@ -98,7 +94,7 @@ public class Nyeash {
             return;
         }
 
-        // delete N  (place BEFORE isFull so user can delete even when "full")
+        // delete N
         if (cmd.equals("delete")) {
             if (parts.length != 2) {
                 throw new NyeashException("Usage: delete <task number>");
@@ -113,7 +109,6 @@ public class Nyeash {
             }
 
             Task removed = taskList.remove(idx);
-            storage.save(taskList);
 
             System.out.println(LINE);
             System.out.println("Noted. I've removed this task:");
@@ -123,7 +118,6 @@ public class Nyeash {
             return;
         }
 
-        // for commands that ADD new tasks
         if (taskList.isFull()) {
             throw new NyeashException("I'M TOO FULL... (max 100 tasks)");
         }
@@ -225,15 +219,7 @@ public class Nyeash {
         printBox("Hello! I'm NYEASH!\nI AM HUNGRY!!!!");
 
         Scanner sc = new Scanner(System.in);
-
         TaskList taskList = new TaskList(100);
-        Storage storage = new Storage("data/nyeash.txt");
-
-        try {
-            storage.load(taskList);
-        } catch (NyeashException e) {
-            printBox("Couldn't load saved tasks, starting fresh.\n" + e.getMessage());
-        }
 
         while (true) {
             String input = sc.nextLine().trim();
