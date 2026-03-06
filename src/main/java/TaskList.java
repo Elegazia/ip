@@ -22,7 +22,6 @@ public class TaskList {
     }
 
     public void add(Task t) {
-        // Caller already checks isFull(), but this prevents silent overflow.
         if (isFull()) {
             throw new IllegalStateException("TaskList is full");
         }
@@ -30,6 +29,19 @@ public class TaskList {
     }
 
     public Task remove(int index) {
-        return tasks.remove(index); // returns the removed Task
+        return tasks.remove(index);
+    }
+
+    public ArrayList<Task> findMatching(String keyword) {
+        ArrayList<Task> matches = new ArrayList<>();
+        String loweredKeyword = keyword.toLowerCase();
+
+        for (Task task : tasks) {
+            if (task.getDescription().toLowerCase().contains(loweredKeyword)) {
+                matches.add(task);
+            }
+        }
+
+        return matches;
     }
 }
