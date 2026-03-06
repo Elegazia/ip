@@ -66,4 +66,17 @@ public class TaskList {
     public Task remove(int index) {
         return tasks.remove(index);
     }
+
+    public ArrayList<Task> findMatching(String keyword) {
+        ArrayList<Task> matches = new ArrayList<>();
+        String loweredKeyword = keyword.toLowerCase();
+
+        for (Task task : tasks) {
+            if (task.getDescription().toLowerCase().contains(loweredKeyword)) {
+                matches.add(task);
+            }
+        }
+
+        return matches;
+    }
 }

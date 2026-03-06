@@ -1,18 +1,49 @@
 public class Parser {
 
-    public static String getCommandWord(String input) throws NyeashException {
+    public static Command parse(String input) throws NyeashException {
         String trimmed = input == null ? "" : input.trim();
         if (trimmed.isEmpty()) {
             throw new NyeashException("You didn't type anything... feed me a command :(");
         }
 
         String[] parts = trimmed.split("\\s+");
-        return parts[0].toLowerCase();
+        String cmd = parts[0].toLowerCase();
+
+        switch (cmd) {
+        case "bye":
+            return new ByeCommand();
+
+        case "list":
+            return new ListCommand();
+
+        case "mark":
+            return new MarkCommand(parseTaskIndex(parts, "mark"));
+
+        case "unmark":
+            return new UnmarkCommand(parseTaskIndex(parts, "unmark"));
+
+        case "delete":
+            return new DeleteCommand(parseTaskIndex(parts, "delete"));
+
+        case "todo":
+            return new TodoCommand(parseTodo(parts));
+
+        case "deadline":
+            return new DeadlineCommand(parseDeadline(parts));
+
+        case "event":
+            return new EventCommand(parseEvent(parts));
+
+        case "find":
+            return new FindCommand(parseFindKeyword(parts));
+
+        default:
+            throw new NyeashException(
+                    "I'm not sure what that means. Try: todo, deadline, event, list, mark, unmark, delete, find, bye");
+        }
     }
 
-    public static int parseTaskIndex(String input, String commandWord) throws NyeashException {
-        String[] parts = splitInput(input);
-
+    private static int parseTaskIndex(String[] parts, String commandWord) throws NyeashException {
         if (parts.length != 2) {
             throw new NyeashException("Usage: " + commandWord + " <task number>");
         }
@@ -23,9 +54,7 @@ public class Parser {
         return Integer.parseInt(parts[1]) - 1;
     }
 
-    public static Todo parseTodo(String input) throws NyeashException {
-        String[] parts = splitInput(input);
-
+    private static Todo parseTodo(String[] parts) throws NyeashException {
         if (parts.length < 2) {
             throw new NyeashException("I need something for the todo!");
         }
@@ -38,10 +67,8 @@ public class Parser {
         return new Todo(desc);
     }
 
-    public static Deadline parseDeadline(String input) throws NyeashException {
-        String[] parts = splitInput(input);
+    private static Deadline parseDeadline(String[] parts) throws NyeashException {
         int byIdx = findIndex(parts, "/by");
-
         if (byIdx == -1) {
             throw new NyeashException("Deadline must include /by. Example: deadline return book /by Sunday");
         }
@@ -59,8 +86,7 @@ public class Parser {
         return new Deadline(desc, by);
     }
 
-    public static Event parseEvent(String input) throws NyeashException {
-        String[] parts = splitInput(input);
+    private static Event parseEvent(String[] parts) throws NyeashException {
         int fromIdx = findIndex(parts, "/from");
         int toIdx = findIndex(parts, "/to");
 
@@ -86,12 +112,17 @@ public class Parser {
         return new Event(desc, from, to);
     }
 
-    private static String[] splitInput(String input) throws NyeashException {
-        String trimmed = input == null ? "" : input.trim();
-        if (trimmed.isEmpty()) {
-            throw new NyeashException("You didn't type anything... feed me a command :(");
+    private static String parseFindKeyword(String[] parts) throws NyeashException {
+        if (parts.length < 2) {
+            throw new NyeashException("Usage: find <keyword>");
         }
-        return trimmed.split("\\s+");
+
+        String keyword = concatTokens(parts, 1, parts.length).trim();
+        if (keyword.isEmpty()) {
+            throw new NyeashException("Usage: find <keyword>");
+        }
+
+        return keyword;
     }
 
     private static boolean isInteger(String s) {
