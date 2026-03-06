@@ -1,25 +1,23 @@
-import java.util.Scanner;
-
 public class Nyeash {
-    private static final String LINE = "_".repeat(60);
-
-    private static void printBox(String message) {
-        System.out.println(LINE);
-        System.out.println(message);
-        System.out.println(LINE);
-    }
+    private static final Ui ui = new Ui();
 
     private static boolean isInteger(String s) {
-        if (s == null || s.isEmpty()) return false;
+        if (s == null || s.isEmpty()) {
+            return false;
+        }
         for (int i = 0; i < s.length(); i++) {
-            if (!Character.isDigit(s.charAt(i))) return false;
+            if (!Character.isDigit(s.charAt(i))) {
+                return false;
+            }
         }
         return true;
     }
 
     private static int findIndex(String[] arr, String target) {
         for (int i = 0; i < arr.length; i++) {
-            if (arr[i].equals(target)) return i;
+            if (arr[i].equals(target)) {
+                return i;
+            }
         }
         return -1;
     }
@@ -27,44 +25,31 @@ public class Nyeash {
     private static String concatTokens(String[] arr, int startInclusive, int endExclusive) {
         String result = "";
         for (int i = startInclusive; i < endExclusive; i++) {
-            if (!result.equals("")) result += " ";
+            if (!result.equals("")) {
+                result += " ";
+            }
             result += arr[i];
         }
         return result;
     }
 
-    // NOTE: This expects TaskList to have:
-    // - size(), isFull(), get(int), add(Task), remove(int)
     private static void handleInput(String input, TaskList taskList, Storage storage) throws NyeashException {
         if (input.isEmpty()) {
             throw new NyeashException("You didn't type anything... feed me a command :(");
         }
 
-        // Split once here, reuse everywhere
         String[] parts = input.split("\\s+");
         String cmd = parts[0].toLowerCase();
 
-        // bye (main loop already handles, but ok to keep)
         if (cmd.equals("bye")) {
             return;
         }
 
-        // list
         if (cmd.equals("list")) {
-            if (taskList.size() == 0) {
-                printBox("NO FOOD HERE... give me tasks.");
-            } else {
-                System.out.println(LINE);
-                System.out.println("Here are the tasks in your list:");
-                for (int i = 0; i < taskList.size(); i++) {
-                    System.out.println((i + 1) + "." + taskList.get(i));
-                }
-                System.out.println(LINE);
-            }
+            ui.showList(taskList);
             return;
         }
 
-        // mark N / unmark N
         if (cmd.equals("mark") || cmd.equals("unmark")) {
             if (parts.length != 2) {
                 throw new NyeashException("Usage: " + cmd + " <task number>");
@@ -81,24 +66,15 @@ public class Nyeash {
             if (cmd.equals("mark")) {
                 taskList.get(idx).markAsDone();
                 storage.save(taskList);
-
-                System.out.println(LINE);
-                System.out.println("Good job on finishing this! NYEASH is very proud of you!");
-                System.out.println("  " + taskList.get(idx));
-                System.out.println(LINE);
+                ui.showMarked(taskList.get(idx));
             } else {
                 taskList.get(idx).markAsNotDone();
                 storage.save(taskList);
-
-                System.out.println(LINE);
-                System.out.println("OK, NYEASH unmarked it. Better finish it cause this is above my paygrade!");
-                System.out.println("  " + taskList.get(idx));
-                System.out.println(LINE);
+                ui.showUnmarked(taskList.get(idx));
             }
             return;
         }
 
-        // delete N  (place BEFORE isFull so user can delete even when "full")
         if (cmd.equals("delete")) {
             if (parts.length != 2) {
                 throw new NyeashException("Usage: delete <task number>");
@@ -114,82 +90,101 @@ public class Nyeash {
 
             Task removed = taskList.remove(idx);
             storage.save(taskList);
-
-            System.out.println(LINE);
-            System.out.println("Noted. I've removed this task:");
-            System.out.println("  " + removed);
-            System.out.println("Now you have " + taskList.size() + " tasks in the list.");
-            System.out.println(LINE);
+            ui.showTaskDeleted(removed, taskList.size());
             return;
         }
 
-        // for commands that ADD new tasks
-        if (taskList.isFull()) {
-            throw new NyeashException("I'M TOO FULL... (max 100 tasks)");
+        if (cmd.equals("todo")) {
+            if (taskList.isFull()) {
+                throw new NyeashException("I'M TOO FULL... (max 100 tasks)");
+            }
+            if (parts.length < 2) {
+                throw new NyeashException("The description of a todo cannot be empty.");
+            }
+
+            String description = concatTokens(parts, 1, parts.length).trim();
+            if (description.isEmpty()) {
+                throw new NyeashException("The description of a todo cannot be empty.");
+            }
+
+            Task t = new Todo(description);
+            taskList.add(t);
+            storage.save(taskList);
+            ui.showTaskAdded(t, taskList.size());
+            return;
         }
 
-        Task newTask;
-
-        // todo <desc>
-        if (cmd.equals("todo")) {
-            if (parts.length < 2) {
-                throw new NyeashException("I need something for the todo!");
-            }
-            String desc = concatTokens(parts, 1, parts.length).trim();
-            if (desc.isEmpty()) {
-                throw new NyeashException("I need something for the todo!");
-            }
-            newTask = new Todo(desc);
-
-        } else if (cmd.equals("deadline")) {
-            int byIdx = findIndex(parts, "/by");
-            if (byIdx == -1) {
-                throw new NyeashException("Deadline must include /by. Example: deadline return book /by Sunday");
+        if (cmd.equals("deadline")) {
+            if (taskList.isFull()) {
+                throw new NyeashException("I'M TOO FULL... (max 100 tasks)");
             }
 
-            String desc = concatTokens(parts, 1, byIdx).trim();
-            String by = concatTokens(parts, byIdx + 1, parts.length).trim();
+            int byIndex = findIndex(parts, "/by");
+            if (byIndex == -1) {
+                throw new NyeashException("Use: deadline <description> /by <time>");
+            }
+            if (byIndex == 1) {
+                throw new NyeashException("The description of a deadline cannot be empty.");
+            }
+            if (byIndex == parts.length - 1) {
+                throw new NyeashException("The /by time cannot be empty.");
+            }
 
-            if (desc.isEmpty()) {
-                throw new NyeashException("Deadline description cannot be empty.");
+            String description = concatTokens(parts, 1, byIndex).trim();
+            String by = concatTokens(parts, byIndex + 1, parts.length).trim();
+
+            if (description.isEmpty()) {
+                throw new NyeashException("The description of a deadline cannot be empty.");
             }
             if (by.isEmpty()) {
-                throw new NyeashException("Deadline time cannot be empty. Use /by <time>.");
+                throw new NyeashException("The /by time cannot be empty.");
             }
 
-            newTask = new Deadline(desc, by);
-
-            // event <desc> /from <from> /to <to>
-        } else if (cmd.equals("event")) {
-            int fromIdx = findIndex(parts, "/from");
-            int toIdx = findIndex(parts, "/to");
-
-            if (fromIdx == -1 || toIdx == -1 || toIdx < fromIdx) {
-                throw new NyeashException("Event must include /from and /to. EXAMPLE: event project meeting /from 2pm /to 4pm");
-            }
-
-            String desc = concatTokens(parts, 1, fromIdx).trim();
-            String from = concatTokens(parts, fromIdx + 1, toIdx).trim();
-            String to = concatTokens(parts, toIdx + 1, parts.length).trim();
-
-            if (desc.isEmpty()) throw new NyeashException("Event description cannot be empty.");
-            if (from.isEmpty()) throw new NyeashException("Event start time cannot be empty. Use /from <time>.");
-            if (to.isEmpty()) throw new NyeashException("Event end time cannot be empty. Use /to <time>.");
-
-            newTask = new Event(desc, from, to);
-
-        } else {
-            throw new NyeashException("I'm not sure what that means. Try: todo, deadline, event, list, mark, unmark, delete, bye");
+            Task t = new Deadline(description, by);
+            taskList.add(t);
+            storage.save(taskList);
+            ui.showTaskAdded(t, taskList.size());
+            return;
         }
 
-        taskList.add(newTask);
-        storage.save(taskList);
+        if (cmd.equals("event")) {
+            if (taskList.isFull()) {
+                throw new NyeashException("I'M TOO FULL... (max 100 tasks)");
+            }
 
-        System.out.println(LINE);
-        System.out.println("Got it. I've added this task:");
-        System.out.println("  " + newTask);
-        System.out.println("Now you have " + taskList.size() + " tasks in the list.");
-        System.out.println(LINE);
+            int fromIndex = findIndex(parts, "/from");
+            int toIndex = findIndex(parts, "/to");
+
+            if (fromIndex == -1 || toIndex == -1 || fromIndex >= toIndex) {
+                throw new NyeashException("Use: event <description> /from <start> /to <end>");
+            }
+            if (fromIndex == 1) {
+                throw new NyeashException("The description of an event cannot be empty.");
+            }
+            if (fromIndex == parts.length - 1 || toIndex == parts.length - 1) {
+                throw new NyeashException("The /from or /to time cannot be empty.");
+            }
+
+            String description = concatTokens(parts, 1, fromIndex).trim();
+            String from = concatTokens(parts, fromIndex + 1, toIndex).trim();
+            String to = concatTokens(parts, toIndex + 1, parts.length).trim();
+
+            if (description.isEmpty()) {
+                throw new NyeashException("The description of an event cannot be empty.");
+            }
+            if (from.isEmpty() || to.isEmpty()) {
+                throw new NyeashException("The /from or /to time cannot be empty.");
+            }
+
+            Task t = new Event(description, from, to);
+            taskList.add(t);
+            storage.save(taskList);
+            ui.showTaskAdded(t, taskList.size());
+            return;
+        }
+
+        throw new NyeashException(
+                "I'm not sure what that means. Try: todo, deadline, event, list, mark, unmark, delete, bye");
     }
 
     public static void main(String[] args) {
@@ -221,10 +216,8 @@ public class Nyeash {
                 ⠀⠀⠙⠿⠿⣿⡇⠹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡺⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠛⠁⠀
                 """;
 
-        System.out.println("Hello from NYEASH!\n" + logo);
-        printBox("Hello! I'm NYEASH!\nI AM HUNGRY!!!!");
 
-        Scanner sc = new Scanner(System.in);
+        ui.showWelcome(logo);
 
         TaskList taskList = new TaskList(100);
         Storage storage = new Storage("data/nyeash.txt");
@@ -232,24 +225,25 @@ public class Nyeash {
         try {
             storage.load(taskList);
         } catch (NyeashException e) {
-            printBox("Couldn't load saved tasks, starting fresh.\n" + e.getMessage());
+            ui.showLoadingError(e.getMessage());
         }
 
         while (true) {
-            String input = sc.nextLine().trim();
+            String input = ui.readCommand();
 
             if (input.equalsIgnoreCase("bye")) {
-                printBox("Please bring me more food next time!");
+                ui.showGoodbye();
                 break;
             }
 
             try {
                 handleInput(input, taskList, storage);
             } catch (NyeashException e) {
-                printBox(e.getMessage());
+                ui.showError(e.getMessage());
             }
         }
 
-        sc.close();
+        ui.close();
     }
 }
+
